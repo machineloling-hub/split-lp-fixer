@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026 Split 1 -> 2025 NA Rank Converter</title>
+<style>
+  :root {
+    --bg: #0f1116;
+    --panel: #1a1d27;
+    --panel2: #232735;
+    --fg: #e8e8ee;
+    --muted: #8a8ea3;
+    --accent: #5eb1ff;
+    --good: #76d68f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 720px;
+    margin: 2em auto;
+    padding: 0 1em 4em;
+    line-height: 1.55;
+  }
+  h1 { font-size: 1.5em; margin: 0 0 0.3em; }
+  p.lead { color: var(--muted); margin-top: 0; }
+  form {
+    display: flex;
+    gap: 0.5em;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 1.4em 0 0;
+    padding: 1em;
+    background: var(--panel);
+    border-radius: 10px;
+  }
+  label { color: var(--muted); font-size: 0.9em; margin-right: 0.2em; }
+  select, input[type=number], button {
+    font: inherit;
+    padding: 0.5em 0.75em;
+    background: var(--panel2);
+    color: var(--fg);
+    border: 1px solid #353a4a;
+    border-radius: 6px;
+  }
+  input[type=number] { width: 5.5em; }
+  button {
+    background: var(--accent);
+    color: #001d3d;
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+  }
+  button:hover { filter: brightness(1.08); }
+  .result {
+    margin-top: 1em;
+    padding: 1.4em 1.4em 1.1em;
+    background: var(--panel);
+    border-radius: 10px;
+    border-left: 3px solid var(--good);
+  }
+  .result .big { font-size: 1.25em; font-weight: 600; line-height: 1.4; }
+  .result .arrow { color: var(--muted); margin: 0 0.5em; font-weight: 400; }
+  .result .meta { color: var(--muted); font-size: 0.9em; margin-top: 0.6em; }
+  .result .range { color: var(--muted); font-size: 0.9em; }
+  details { margin-top: 2.2em; color: var(--muted); }
+  details summary { cursor: pointer; color: var(--fg); font-weight: 500; padding: 0.4em 0; }
+  details p { margin: 0.6em 0; }
+  details ol li { margin-bottom: 0.4em; }
+  code { background: var(--panel2); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.9em; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>2026 Split 1 &rarr; 2025 NA rank</h1>
+<p class="lead">Riot inflated NA ranked between 2025 and 2026. Enter your 2026 split 1 rank to see what NA percentile that was in 2025.</p>
+
+<form id="form">
+  <label for="tier">Tier</label>
+  <select id="tier"></select>
+  <select id="div"></select>
+  <label for="lp">LP</label>
+  <input type="number" id="lp" min="0" value="50">
+  <button type="submit">Convert</button>
+</form>
+
+<div id="result"></div>
+
+<details>
+<summary>How does this work?</summary>
+<p>Two-step quantile inversion:</p>
+<ol>
+<li>Compute the percentile of your 2026 rank within the full NA ladder (1.085M players, from a 2026 split 1 snapshot).</li>
+<li>Find the 2025 rank covering that same percentile (using Riot&rsquo;s published 2025 distribution: 0.69% Master+, 2.56% Diamond, etc.).</li>
+</ol>
+<p>Within-division LP is interpolated linearly (0&ndash;99). Real distributions skew toward low LP, so your true 2025 spot is often a half-division more inflated than the linear estimate.</p>
+<p>Master+ output LP is reported in 2026&rsquo;s LP scale &mdash; we don&rsquo;t have LP-level data for 2025, so the model assumes the conditional LP distribution within Master+ is preserved year-over-year.</p>
+<p>Source: <a href="https://github.com/machineloling-hub" target="_blank">github</a>. Built from Riot&rsquo;s published tier % and a 2026 split 1 NA snapshot.</p>
+</details>
+
+<script>
+"use strict";
+
+// ============================================================================
+// Data
+// ============================================================================
+
+const TOTAL_NA_2026 = 1085151;
+
+// 2026 master+ snapshot rows: [tier, lp_lo, lp_hi, count], top-down by rank.
+const MP_2026 = [
+  // Challenger (300)
+  ["CHALLENGER", 3700, 3799, 1],
+  ["CHALLENGER", 3600, 3699, 1],
+  ["CHALLENGER", 3500, 3599, 2],
+  ["CHALLENGER", 3100, 3199, 1],
+  ["CHALLENGER", 3000, 3099, 1],
+  ["CHALLENGER", 2900, 2999, 1],
+  ["CHALLENGER", 2800, 2899, 2],
+  ["CHALLENGER", 2700, 2799, 2],
+  ["CHALLENGER", 2600, 2699, 5],
+  ["CHALLENGER", 2500, 2599, 12],
+  ["CHALLENGER", 2400, 2499, 7],
+  ["CHALLENGER", 2300, 2399, 16],
+  ["CHALLENGER", 2200, 2299, 16],
+  ["CHALLENGER", 2100, 2199, 14],
+  ["CHALLENGER", 2000, 2099, 29],
+  ["CHALLENGER", 1900, 1999, 17],
+  ["CHALLENGER", 1800, 1899, 41],
+  ["CHALLENGER", 1700, 1799, 53],
+  ["CHALLENGER", 1600, 1699, 71],
+  ["CHALLENGER", 1500, 1599, 8],
+  // Grandmaster (700)
+  ["GRANDMASTER", 1600, 1699, 4],
+  ["GRANDMASTER", 1500, 1599, 56],
+  ["GRANDMASTER", 1400, 1499, 75],
+  ["GRANDMASTER", 1300, 1399, 96],
+  ["GRANDMASTER", 1200, 1299, 106],
+  ["GRANDMASTER", 1100, 1199, 151],
+  ["GRANDMASTER", 1000, 1099, 185],
+  ["GRANDMASTER", 900, 999, 26],
+  ["GRANDMASTER", 800, 899, 1],
+  // Master (11514)
+  ["MASTER", 1000, 1099, 28],
+  ["MASTER", 900, 999, 176],
+  ["MASTER", 800, 899, 281],
+  ["MASTER", 700, 799, 309],
+  ["MASTER", 600, 699, 419],
+  ["MASTER", 500, 599, 568],
+  ["MASTER", 400, 499, 700],
+  ["MASTER", 300, 399, 960],
+  ["MASTER", 200, 299, 1310],
+  ["MASTER", 100, 199, 1922],
+  ["MASTER",   0,   99, 4841]
+];
+
+// 2026 division counts from snapshot.
+const DIVS_2026 = [
+  ["DIAMOND",  "I",   5856], ["DIAMOND",  "II",  6914],
+  ["DIAMOND",  "III", 7084], ["DIAMOND",  "IV",  17519],
+  ["EMERALD",  "I",   20066], ["EMERALD",  "II",  18413],
+  ["EMERALD",  "III", 25904], ["EMERALD",  "IV",  50037],
+  ["PLATINUM", "I",   25379], ["PLATINUM", "II",  38246],
+  ["PLATINUM", "III", 48070], ["PLATINUM", "IV",  79814],
+  ["GOLD",     "I",   42749], ["GOLD",     "II",  60942],
+  ["GOLD",     "III", 68321], ["GOLD",     "IV",  97410],
+  ["SILVER",   "I",   50252], ["SILVER",   "II",  63427],
+  ["SILVER",   "III", 64045], ["SILVER",   "IV",  73907],
+  ["BRONZE",   "I",   43606], ["BRONZE",   "II",  44933],
+  ["BRONZE",   "III", 41151], ["BRONZE",   "IV",  48243],
+  ["IRON",     "I",   16127], ["IRON",     "II",  7613],
+  ["IRON",     "III", 3459], ["IRON",     "IV",  3150]
+];
+
+// 2025 historical fractions of total NA (from Riot's published distribution).
+const PCT_2025 = {
+  CHALLENGER:   0.0003, GRANDMASTER:  0.0007, MASTER:       0.0059,
+  DIAMOND_I:    0.0039, DIAMOND_II:   0.0047, DIAMOND_III:  0.0050, DIAMOND_IV:   0.0120,
+  EMERALD_I:    0.0140, EMERALD_II:   0.0130, EMERALD_III:  0.0190, EMERALD_IV:   0.0380,
+  PLATINUM_I:   0.0150, PLATINUM_II:  0.0240, PLATINUM_III: 0.0290, PLATINUM_IV:  0.0490,
+  GOLD_I:       0.0220, GOLD_II:      0.0360, GOLD_III:     0.0440, GOLD_IV:      0.0730,
+  SILVER_I:     0.0330, SILVER_II:    0.0460, SILVER_III:   0.0490, SILVER_IV:    0.0650,
+  BRONZE_I:     0.0350, BRONZE_II:    0.0470, BRONZE_III:   0.0510, BRONZE_IV:    0.0640,
+  IRON_I:       0.0340, IRON_II:      0.0470, IRON_III:     0.0550, IRON_IV:      0.0530
+};
+
+const TIERS = ["CHALLENGER", "GRANDMASTER", "MASTER",
+               "DIAMOND", "EMERALD", "PLATINUM",
+               "GOLD", "SILVER", "BRONZE", "IRON"];
+const DIVS  = ["I", "II", "III", "IV"];
+
+// ============================================================================
+// Conversion logic
+// ============================================================================
+
+function pct2026(tier, div, lp) {
+  // Returns NA percentile (fraction from top of ladder) of input rank.
+  let cum = 0;
+  if (tier === "CHALLENGER" || tier === "GRANDMASTER" || tier === "MASTER") {
+    for (const [t, lo, hi, count] of MP_2026) {
+      if (t === tier && lp >= lo && lp <= hi) {
+        const fracAbove = (hi - lp) / (hi - lo + 1);
+        cum += count * fracAbove;
+        return cum / TOTAL_NA_2026;
+      }
+      cum += count;
+    }
+    // LP above highest snapshot bin (e.g. Challenger at 4500 LP) -> very top.
+    return 0;
+  }
+  for (const [, , , count] of MP_2026) cum += count;
+  for (const [t, d, count] of DIVS_2026) {
+    if (t === tier && d === div) {
+      const fracAbove = Math.max(0, (99 - lp)) / 100;
+      cum += count * fracAbove;
+      return cum / TOTAL_NA_2026;
+    }
+    cum += count;
+  }
+  return 1;
+}
+
+function buildLadder2025() {
+  const stops = [];
+  let cum = 0;
+  for (const tier of TIERS) {
+    if (tier === "CHALLENGER" || tier === "GRANDMASTER" || tier === "MASTER") {
+      const w = PCT_2025[tier];
+      stops.push({ tier, div: null, top: cum, bot: cum + w });
+      cum += w;
+    } else {
+      for (const div of DIVS) {
+        const w = PCT_2025[tier + "_" + div] || 0;
+        stops.push({ tier, div, top: cum, bot: cum + w });
+        cum += w;
+      }
+    }
+  }
+  return stops;
+}
+
+const LADDER_2025 = buildLadder2025();
+
+function lpInMasterPlusForFrac(tier, fracIntoTier) {
+  // Borrowed shape: estimate LP within Chall/GM/Master using 2026 distribution.
+  const bins = MP_2026.filter(([t]) => t === tier);
+  const total = bins.reduce((s, b) => s + b[3], 0);
+  let cum = 0;
+  for (const [, lo, hi, count] of bins) {
+    const startFrac = cum / total;
+    const endFrac = (cum + count) / total;
+    if (fracIntoTier <= endFrac) {
+      const fracInBin = (fracIntoTier - startFrac) / Math.max(1e-12, endFrac - startFrac);
+      const lp = hi - fracInBin * (hi - lo + 1);
+      return Math.max(lo, Math.round(lp));
+    }
+    cum += count;
+  }
+  return bins[bins.length - 1][1];
+}
+
+function rank2025AtPct(p) {
+  for (const s of LADDER_2025) {
+    if (p < s.bot) {
+      const fracIntoTier = (p - s.top) / Math.max(1e-12, s.bot - s.top);
+      if (s.div) {
+        const lp = Math.max(0, Math.min(99, Math.round(99 * (1 - fracIntoTier))));
+        return { tier: s.tier, div: s.div, lp, label: formatLabel(s.tier, s.div, lp) };
+      }
+      const lp = lpInMasterPlusForFrac(s.tier, fracIntoTier);
+      return { tier: s.tier, div: null, lp, label: formatLabel(s.tier, null, lp) };
+    }
+  }
+  // Beyond the cumulative 2025 distribution (historical %s sum to ~98.75%
+  // due to rounding) — clamp to bottom of Iron IV.
+  const last = LADDER_2025[LADDER_2025.length - 1];
+  return { tier: last.tier, div: last.div, lp: 0,
+           label: formatLabel(last.tier, last.div, 0) };
+}
+
+function formatLabel(tier, div, lp) {
+  const t = tier[0] + tier.slice(1).toLowerCase();
+  if (div) return `${t} ${div} ${lp} LP`;
+  return `${t} ${lp} LP`;
+}
+
+// ============================================================================
+// UI
+// ============================================================================
+
+const tierEl   = document.getElementById("tier");
+const divEl    = document.getElementById("div");
+const lpEl     = document.getElementById("lp");
+const resultEl = document.getElementById("result");
+
+for (const t of TIERS) {
+  const opt = document.createElement("option");
+  opt.value = t;
+  opt.textContent = t[0] + t.slice(1).toLowerCase();
+  tierEl.appendChild(opt);
+}
+for (const d of DIVS) {
+  const opt = document.createElement("option");
+  opt.value = d;
+  opt.textContent = d;
+  divEl.appendChild(opt);
+}
+tierEl.value = "MASTER";
+
+function syncForm() {
+  const isMP = ["CHALLENGER", "GRANDMASTER", "MASTER"].includes(tierEl.value);
+  divEl.style.display = isMP ? "none" : "";
+  if (isMP) lpEl.placeholder = "LP";
+  else      lpEl.placeholder = "0-99";
+}
+tierEl.addEventListener("change", syncForm);
+syncForm();
+
+function convert() {
+  const tier = tierEl.value;
+  const div  = divEl.value;
+  const lp   = Math.max(0, Number(lpEl.value) || 0);
+  const isMP = ["CHALLENGER", "GRANDMASTER", "MASTER"].includes(tier);
+
+  const p     = pct2026(tier, div, lp);
+  const out   = rank2025AtPct(p);
+  const input = isMP ? `${tier[0] + tier.slice(1).toLowerCase()} ${lp} LP`
+                     : `${tier[0] + tier.slice(1).toLowerCase()} ${div} ${lp} LP`;
+
+  resultEl.innerHTML = `
+    <div class="result">
+      <div class="big">${input} <span class="arrow">&rarr;</span> ${out.label}</div>
+      <div class="meta">
+        Top <strong>${(p * 100).toFixed(3)}%</strong> of NA in 2026 split 1.
+      </div>
+      <div class="meta range">
+        Real LP within a 2025 division skews low &mdash; expect to land roughly
+        a half-division below this estimate in practice.
+      </div>
+    </div>
+  `;
+}
+
+document.getElementById("form").addEventListener("submit", e => {
+  e.preventDefault();
+  convert();
+});
+convert();   // run once on load
+</script>
+
+</body>
+</html>
