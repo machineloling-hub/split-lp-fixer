@@ -65,6 +65,19 @@
   .result .arrow { color: var(--muted); margin: 0 0.5em; font-weight: 400; }
   .result .meta { color: var(--muted); font-size: 0.9em; margin-top: 0.6em; }
   .result .range { color: var(--muted); font-size: 0.9em; }
+  figure.ladder {
+    margin: 1.8em 0 0;
+    padding: 1em;
+    background: var(--panel);
+    border-radius: 10px;
+  }
+  figure.ladder img { display: block; width: 100%; height: auto; border-radius: 6px; }
+  figure.ladder figcaption {
+    color: var(--muted);
+    font-size: 0.9em;
+    margin-top: 0.6em;
+    text-align: center;
+  }
   details { margin-top: 2.2em; color: var(--muted); }
   details summary { cursor: pointer; color: var(--fg); font-weight: 500; padding: 0.4em 0; }
   details p { margin: 0.6em 0; }
@@ -88,6 +101,11 @@
 </form>
 
 <div id="result"></div>
+
+<figure class="ladder">
+  <img src="ladder_compare_2025.png" alt="2026 Split 1 to 2025 NA ladder comparison: side-by-side stacked bars showing each rank's percentile in both years.">
+  <figcaption>2026 Split 1 vs 2025 NA ladder. Each 2026 boundary maps horizontally to the same percentile in 2025.</figcaption>
+</figure>
 
 <details>
 <summary>How does this work?</summary>
