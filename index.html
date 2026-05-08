@@ -94,11 +94,11 @@
 <p>Two-step quantile inversion:</p>
 <ol>
 <li>Compute the percentile of your 2026 rank within the full NA ladder (1.085M players, from a 2026 split 1 snapshot).</li>
-<li>Find the 2025 rank covering that same percentile (using Riot&rsquo;s published 2025 distribution: 0.69% Master+, 2.56% Diamond, etc.).</li>
+<li>Find the 2025 rank covering that same percentile, using historical NA tier %s scraped from Beora&rsquo;s <a href="https://nextechlol.github.io/timewinder/#view=historical&amp;region=EU" target="_blank">Timewinder</a> app (0.69% Master+, 2.56% Diamond, etc. for 2025).</li>
 </ol>
 <p>Within-division LP is interpolated linearly (0&ndash;99). Real distributions skew toward low LP, so your true 2025 spot is often a half-division more inflated than the linear estimate.</p>
 <p>Master+ output LP is reported in 2026&rsquo;s LP scale &mdash; we don&rsquo;t have LP-level data for 2025, so the model assumes the conditional LP distribution within Master+ is preserved year-over-year.</p>
-<p>Source: <a href="https://github.com/machineloling-hub" target="_blank">github</a>. Built from Riot&rsquo;s published tier % and a 2026 split 1 NA snapshot.</p>
+<p>Historical distribution data: Beora&rsquo;s <a href="https://nextechlol.github.io/timewinder/#view=historical&amp;region=EU" target="_blank">Timewinder</a>. Code: <a href="https://github.com/machineloling-hub/split-lp-fixer" target="_blank">github</a>.</p>
 </details>
 
 <script>

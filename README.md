@@ -18,7 +18,7 @@ Master+ output LP is reported in 2026's LP scale — there is no LP-level data f
 ## Data sources
 
 - 2026 split 1 NA snapshot (`MP_2026`, `DIVS_2026` in `index.html`).
-- 2025 NA tier %, sourced from Riot's published distribution.
+- Historical NA tier %s scraped from Beora's [Timewinder](https://nextechlol.github.io/timewinder/#view=historical&region=EU).
 
 ## Deploy
 
