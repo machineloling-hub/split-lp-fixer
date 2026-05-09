@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill distribution gallery — NA 2025 ranks</title>
+<style>
+  :root {
+    --bg: #0f1116;
+    --panel: #1a1d27;
+    --panel2: #232735;
+    --fg: #e8e8ee;
+    --muted: #8a8ea3;
+    --accent: #5eb1ff;
+    --good: #76d68f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 960px;
+    margin: 2em auto;
+    padding: 0 1em 4em;
+    line-height: 1.55;
+  }
+  h1 { font-size: 1.5em; margin: 0 0 0.3em; }
+  p.lead { color: var(--muted); margin-top: 0; }
+  .top-link { font-size: 0.9em; }
+  figure.plot-fig {
+    margin: 1.2em 0 0;
+    padding: 1em;
+    background: var(--panel);
+    border-radius: 10px;
+  }
+  figure.plot-fig figcaption {
+    color: var(--muted);
+    font-size: 0.9em;
+    margin-bottom: 0.6em;
+  }
+  figure.plot-fig figcaption strong { color: var(--fg); font-weight: 600; }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 280px;
+    border-radius: 6px;
+  }
+  .toggles {
+    margin: 0.8em 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7em;
+    align-items: center;
+  }
+  .toggle-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    background: var(--panel);
+    padding: 0.4em 0.7em;
+    border-radius: 8px;
+  }
+  .toggle-group .toggle-label {
+    color: var(--muted);
+    font-size: 0.85em;
+    margin-right: 0.2em;
+  }
+  .toggle-group button {
+    font: inherit;
+    padding: 0.25em 0.7em;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid #353a4a;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85em;
+  }
+  .toggle-group button:hover { background: var(--panel2); }
+  .toggle-group button.active {
+    background: var(--accent);
+    color: #001d3d;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .legend {
+    margin: 0.7em 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35em;
+  }
+  .legend .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.2em 0.6em 0.2em 0.3em;
+    background: var(--panel2);
+    border-radius: 4px;
+    font-size: 0.82em;
+    color: var(--fg);
+  }
+  .legend .swatch {
+    width: 0.85em;
+    height: 0.85em;
+    border-radius: 2px;
+    flex: 0 0 auto;
+  }
+  .picker {
+    margin: 1em 0 0;
+    padding: 0.7em;
+    background: var(--panel);
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+  }
+  .picker button {
+    font: inherit;
+    padding: 0.45em 0.95em;
+    background: var(--panel2);
+    color: var(--fg);
+    border: 1px solid #353a4a;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.92em;
+    transition: background 0.12s;
+  }
+  .picker button:hover { background: #2a2f40; }
+  .picker button.active {
+    background: var(--accent);
+    color: #001d3d;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .desc {
+    margin: 0.6em 0 0;
+    padding: 0.8em 1em;
+    background: var(--panel);
+    border-radius: 10px;
+    color: var(--fg);
+    font-size: 0.96em;
+    line-height: 1.5;
+  }
+  .desc strong { color: var(--fg); }
+  .desc .tech {
+    margin-top: 0.4em;
+    padding-top: 0.4em;
+    border-top: 1px solid #232735;
+    color: var(--muted);
+    font-size: 0.86em;
+    line-height: 1.45;
+  }
+  .desc .moment {
+    margin-left: 0.6em;
+    color: var(--muted);
+    font-size: 0.92em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stats {
+    margin-top: 1em;
+    padding: 1em 1.2em;
+    background: var(--panel);
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+  .stats .stats-note {
+    color: var(--muted);
+    font-size: 0.88em;
+    margin: 0 0 0.8em;
+    line-height: 1.45;
+  }
+  .stats table { width: 100%; border-collapse: collapse; font-size: 0.92em; font-variant-numeric: tabular-nums; }
+  .stats th, .stats td { padding: 0.4em 0.7em; text-align: right; white-space: nowrap; }
+  .stats th:first-child, .stats td:first-child { text-align: left; }
+  .stats th {
+    color: var(--muted);
+    font-weight: 500;
+    border-bottom: 1px solid #353a4a;
+  }
+  .stats tr.tier-row td:first-child {
+    border-left: 4px solid;
+    padding-left: 0.7em;
+  }
+  .stats tr.tier-row td.now-cell { color: var(--fg); font-weight: 500; }
+  .stats tr.tier-row td.delta-up { color: var(--good); }
+  .stats tr.tier-row td.delta-down { color: #ef6b6b; }
+  .stats tr.tier-row td.delta-zero { color: var(--muted); }
+  details { margin-top: 2em; color: var(--muted); }
+  details summary { cursor: pointer; color: var(--fg); font-weight: 500; padding: 0.4em 0; }
+  details p { margin: 0.6em 0; }
+  a { color: var(--accent); }
+  code { background: var(--panel2); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<p class="top-link"><a href="index.html">&larr; back to rank converter</a></p>
+<h1>Skill distribution gallery</h1>
+<p class="lead">What if NA League skill didn't follow a textbook normal? Pick a candidate distribution shape and see how the 2025 NA rank cutoffs would carve up the population in skill terms. Population per rank stays exactly fixed (cutoffs always sit at the same percentile); only the σ-width of skill each rank covers changes with the shape.</p>
+
+<figure class="plot-fig">
+  <figcaption id="figCaption"><strong>2025 NA</strong> ranks &mdash; 0.69% Master+, 2.56% Diamond, 8.40% Emerald</figcaption>
+  <canvas id="plot"></canvas>
+  <div class="legend" id="legend"></div>
+</figure>
+
+<div class="toggles">
+  <div class="toggle-group">
+    <span class="toggle-label">Ranks</span>
+    <button data-year="2025" class="active">2025</button>
+    <button data-year="2026">2026 split 1</button>
+  </div>
+  <div class="toggle-group">
+    <span class="toggle-label">Y axis</span>
+    <button data-yaxis="linear" class="active">linear</button>
+    <button data-yaxis="log">log</button>
+  </div>
+</div>
+
+<div class="picker" id="picker"></div>
+<div class="desc" id="desc"></div>
+
+<details>
+<summary>How does this work? &amp; sources</summary>
+<p>Each preset is a probability density that might plausibly describe a population of LoL player skills. The page numerically normalises each pdf, computes its cdf, and inverts it at every NA-2025 rank cutoff. Each distribution is then standardised to mean 0 and std 1 so shapes are directly comparable on the σ-axis.</p>
+<p>Because rank cutoffs are at fixed cumulative percentiles, every distribution preserves the same population fraction in each rank — only the σ-width of skill each rank covers changes with the shape.</p>
+<p>Distributions cited from the rating-systems / psychometrics / ranking literature:</p>
+<ul style="margin:0.5em 0 0.5em 1.2em;padding:0;line-height:1.5">
+<li><strong>Normal</strong> &mdash; TrueSkill (Herbrich et al., 2007), Glicko (Glickman, 1995): individual ratings are Gaussian.</li>
+<li><strong>Logistic</strong> &mdash; the implicit shape behind Bradley–Terry (1952) and Elo: pairwise win probability is logistic in rating gap.</li>
+<li><strong>Gumbel / extreme value</strong> &mdash; Plackett–Luce ranking models (Plackett, 1975) and the multinomial-logit family.</li>
+<li><strong>Lognormal</strong> &mdash; multiplicative-skill assumption; Limpert et al. 2001 catalogue lognormal in human-performance data.</li>
+<li><strong>Gamma / Weibull</strong> &mdash; right-skewed positive distributions used in psychometrics and skill-acquisition / learning-curve studies.</li>
+<li><strong>Student t</strong> &mdash; robust-statistics version of Normal; heavier tails to handle extreme outliers.</li>
+<li><strong>Skew-normal</strong> &mdash; Azzalini (1985) extension of the normal; common as a flexible right-skewed alternative.</li>
+<li><strong>Bimodal mixtures</strong> &mdash; documented in matchmaking-data analyses where casual and grinder subpopulations show as two peaks.</li>
+<li><strong>Truncated normal</strong> &mdash; bounded skill (mechanical ceiling) variant.</li>
+</ul>
+<p>Data: 2025 NA tier %s scraped from Beora's <a href="https://nextechlol.github.io/timewinder/#view=historical&amp;region=EU" target="_blank">Timewinder</a>. Code: <a href="https://github.com/machineloling-hub/split-lp-fixer" target="_blank">github</a>.</p>
+</details>
+
+<script>
+"use strict";
+
+// ============================================================================
+// Math helpers
+// ============================================================================
+
+function normPdf(x) {
+  return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+}
+
+// Abramowitz & Stegun 7.1.26 approximation for erf, used to compute Φ.
+function normCdf(x) {
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  const z = Math.abs(x) / Math.sqrt(2);
+  const t = 1 / (1 + p * z);
+  const y = 1 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t * Math.exp(-z*z);
+  return 0.5 * (1 + sign * y);
+}
+
+// Skew-normal pdf at x with location ξ, scale ω, shape α.
+function skewNormalPdf(x, xi, omega, alpha) {
+  const z = (x - xi) / omega;
+  return 2 * normPdf(z) * normCdf(alpha * z) / omega;
+}
+
+// Mixture of two normals.
+function mixNormalPdf(x, w1, mu1, s1, mu2, s2) {
+  const w2 = 1 - w1;
+  return w1 * normPdf((x - mu1) / s1) / s1
+       + w2 * normPdf((x - mu2) / s2) / s2;
+}
+
+// ============================================================================
+// 2025 NA rank data — same source as index.html
+// ============================================================================
+
+const PCT_2025 = {
+  CHALLENGER:   0.0003, GRANDMASTER:  0.0007, MASTER:       0.0059,
+  DIAMOND_I:    0.0039, DIAMOND_II:   0.0047, DIAMOND_III:  0.0050, DIAMOND_IV:   0.0120,
+  EMERALD_I:    0.0140, EMERALD_II:   0.0130, EMERALD_III:  0.0190, EMERALD_IV:   0.0380,
+  PLATINUM_I:   0.0150, PLATINUM_II:  0.0240, PLATINUM_III: 0.0290, PLATINUM_IV:  0.0490,
+  GOLD_I:       0.0220, GOLD_II:      0.0360, GOLD_III:     0.0440, GOLD_IV:      0.0730,
+  SILVER_I:     0.0330, SILVER_II:    0.0460, SILVER_III:   0.0490, SILVER_IV:    0.0650,
+  BRONZE_I:     0.0350, BRONZE_II:    0.0470, BRONZE_III:   0.0510, BRONZE_IV:    0.0640,
+  IRON_I:       0.0340, IRON_II:      0.0470, IRON_III:     0.0550, IRON_IV:      0.0530
+};
+
+const TIERS_ORDER = ["CHALLENGER", "GRANDMASTER", "MASTER",
+                     "DIAMOND", "EMERALD", "PLATINUM",
+                     "GOLD", "SILVER", "BRONZE", "IRON"];
+const DIVS = ["I", "II", "III", "IV"];
+
+const TIER_COLORS = {
+  CHALLENGER:  "#f4d03f",
+  GRANDMASTER: "#e74c3c",
+  MASTER:      "#a55eea",
+  DIAMOND:     "#5dade2",
+  EMERALD:     "#48c774",
+  PLATINUM:    "#1abc9c",
+  GOLD:        "#e0a526",
+  SILVER:      "#bdc3c7",
+  BRONZE:      "#a0522d",
+  IRON:        "#525252"
+};
+
+const TIER_LABEL = {
+  CHALLENGER:  "Challenger",
+  GRANDMASTER: "Grandmaster",
+  MASTER:      "Master",
+  DIAMOND:     "Diamond",
+  EMERALD:     "Emerald",
+  PLATINUM:    "Platinum",
+  GOLD:        "Gold",
+  SILVER:      "Silver",
+  BRONZE:      "Bronze",
+  IRON:        "Iron"
+};
+
+function buildBands2025() {
+  const bands = [];
+  let cum = 0;
+  for (const tier of TIERS_ORDER) {
+    const isMP = tier === "CHALLENGER" || tier === "GRANDMASTER" || tier === "MASTER";
+    if (isMP) {
+      const w = PCT_2025[tier];
+      bands.push({tier, div: null, top: cum, bot: cum + w, color: TIER_COLORS[tier]});
+      cum += w;
+    } else {
+      for (const div of DIVS) {
+        const w = PCT_2025[tier + "_" + div] || 0;
+        bands.push({tier, div, top: cum, bot: cum + w, color: TIER_COLORS[tier]});
+        cum += w;
+      }
+    }
+  }
+  // 2025 percentages sum to 0.9875 due to rounding in the source — stretch the
+  // bottom band so Iron IV swallows the gap.
+  if (bands.length) bands[bands.length - 1].bot = 1.0;
+  return bands;
+}
+
+// 2026 split 1 NA snapshot (1.085M players). Master+ at 100-LP precision.
+const TOTAL_NA_2026 = 1085151;
+
+const MP_2026 = [
+  ["CHALLENGER", 3700, 3799, 1], ["CHALLENGER", 3600, 3699, 1],
+  ["CHALLENGER", 3500, 3599, 2], ["CHALLENGER", 3100, 3199, 1],
+  ["CHALLENGER", 3000, 3099, 1], ["CHALLENGER", 2900, 2999, 1],
+  ["CHALLENGER", 2800, 2899, 2], ["CHALLENGER", 2700, 2799, 2],
+  ["CHALLENGER", 2600, 2699, 5], ["CHALLENGER", 2500, 2599, 12],
+  ["CHALLENGER", 2400, 2499, 7], ["CHALLENGER", 2300, 2399, 16],
+  ["CHALLENGER", 2200, 2299, 16], ["CHALLENGER", 2100, 2199, 14],
+  ["CHALLENGER", 2000, 2099, 29], ["CHALLENGER", 1900, 1999, 17],
+  ["CHALLENGER", 1800, 1899, 41], ["CHALLENGER", 1700, 1799, 53],
+  ["CHALLENGER", 1600, 1699, 71], ["CHALLENGER", 1500, 1599, 8],
+  ["GRANDMASTER", 1600, 1699, 4], ["GRANDMASTER", 1500, 1599, 56],
+  ["GRANDMASTER", 1400, 1499, 75], ["GRANDMASTER", 1300, 1399, 96],
+  ["GRANDMASTER", 1200, 1299, 106], ["GRANDMASTER", 1100, 1199, 151],
+  ["GRANDMASTER", 1000, 1099, 185], ["GRANDMASTER", 900, 999, 26],
+  ["GRANDMASTER", 800, 899, 1],
+  ["MASTER", 1000, 1099, 28], ["MASTER", 900, 999, 176],
+  ["MASTER", 800, 899, 281], ["MASTER", 700, 799, 309],
+  ["MASTER", 600, 699, 419], ["MASTER", 500, 599, 568],
+  ["MASTER", 400, 499, 700], ["MASTER", 300, 399, 960],
+  ["MASTER", 200, 299, 1310], ["MASTER", 100, 199, 1922],
+  ["MASTER",   0,   99, 4841]
+];
+
+const DIVS_2026 = [
+  ["DIAMOND",  "I",   5856], ["DIAMOND",  "II",  6914],
+  ["DIAMOND",  "III", 7084], ["DIAMOND",  "IV",  17519],
+  ["EMERALD",  "I",   20066], ["EMERALD",  "II",  18413],
+  ["EMERALD",  "III", 25904], ["EMERALD",  "IV",  50037],
+  ["PLATINUM", "I",   25379], ["PLATINUM", "II",  38246],
+  ["PLATINUM", "III", 48070], ["PLATINUM", "IV",  79814],
+  ["GOLD",     "I",   42749], ["GOLD",     "II",  60942],
+  ["GOLD",     "III", 68321], ["GOLD",     "IV",  97410],
+  ["SILVER",   "I",   50252], ["SILVER",   "II",  63427],
+  ["SILVER",   "III", 64045], ["SILVER",   "IV",  73907],
+  ["BRONZE",   "I",   43606], ["BRONZE",   "II",  44933],
+  ["BRONZE",   "III", 41151], ["BRONZE",   "IV",  48243],
+  ["IRON",     "I",   16127], ["IRON",     "II",  7613],
+  ["IRON",     "III", 3459], ["IRON",     "IV",  3150]
+];
+
+function buildBands2026() {
+  const bands = [];
+  let cum = 0;
+  for (const tier of ["CHALLENGER", "GRANDMASTER", "MASTER"]) {
+    const count = MP_2026.filter(([t]) => t === tier).reduce((s, b) => s + b[3], 0);
+    const w = count / TOTAL_NA_2026;
+    bands.push({tier, div: null, top: cum, bot: cum + w, color: TIER_COLORS[tier]});
+    cum += w;
+  }
+  for (const [tier, div, count] of DIVS_2026) {
+    const w = count / TOTAL_NA_2026;
+    bands.push({tier, div, top: cum, bot: cum + w, color: TIER_COLORS[tier]});
+    cum += w;
+  }
+  if (bands.length) bands[bands.length - 1].bot = 1.0;
+  return bands;
+}
+
+const BANDS_2025 = buildBands2025();
+const BANDS_2026 = buildBands2026();
+
+// === Live toggles ===
+let activeYear = "2025";
+let useLogY    = false;
+let activeId   = "normal";
+function activeBands() { return activeYear === "2025" ? BANDS_2025 : BANDS_2026; }
+function dist() { return BUILT[activeId]; }
+
+// ============================================================================
+// Distribution framework — feeds an unnormalised pdf and a support range, gets
+// back normalised pdf, cdf, inverse cdf, mean, std, skewness, plus the same
+// quantities expressed in standardised (mean=0, std=1) coordinates so all
+// presets share a comparable σ-axis.
+// ============================================================================
+
+function buildDist(spec) {
+  const { range, pdfRaw } = spec;
+  const xMin = range[0], xMax = range[1];
+  const N = 4000;
+  const dx = (xMax - xMin) / N;
+
+  const pdfArr = new Float64Array(N + 1);
+  const cdfArr = new Float64Array(N + 1);
+  for (let i = 0; i <= N; i++) pdfArr[i] = Math.max(0, pdfRaw(xMin + i * dx));
+  cdfArr[0] = 0;
+  for (let i = 0; i < N; i++) {
+    cdfArr[i + 1] = cdfArr[i] + 0.5 * (pdfArr[i] + pdfArr[i + 1]) * dx;
+  }
+  const total = cdfArr[N];
+  for (let i = 0; i <= N; i++) {
+    pdfArr[i] /= total;
+    cdfArr[i] /= total;
+  }
+
+  // Moments
+  let mean = 0;
+  for (let i = 0; i <= N; i++) mean += (xMin + i * dx) * pdfArr[i] * dx;
+  let m2 = 0, m3 = 0;
+  for (let i = 0; i <= N; i++) {
+    const x = xMin + i * dx;
+    const c = x - mean;
+    m2 += c * c * pdfArr[i] * dx;
+    m3 += c * c * c * pdfArr[i] * dx;
+  }
+  const std = Math.sqrt(Math.max(1e-12, m2));
+  const skewness = m3 / (std * std * std);
+
+  function pdfRaw_(x) {
+    if (x <= xMin) return pdfArr[0];
+    if (x >= xMax) return pdfArr[N];
+    const t = (x - xMin) / dx;
+    const i = Math.floor(t);
+    const f = t - i;
+    return pdfArr[i] * (1 - f) + pdfArr[i + 1] * f;
+  }
+  function invCdfRaw_(p) {
+    if (p <= 0) return xMin;
+    if (p >= 1) return xMax;
+    let lo = 0, hi = N;
+    while (lo < hi - 1) {
+      const mid = (lo + hi) >> 1;
+      if (cdfArr[mid] < p) lo = mid;
+      else hi = mid;
+    }
+    const span = cdfArr[hi] - cdfArr[lo];
+    const f = span > 1e-12 ? (p - cdfArr[lo]) / span : 0;
+    return xMin + (lo + f) * dx;
+  }
+
+  // Standardised versions: z = (x − mean) / std
+  const stdMin = (xMin - mean) / std;
+  const stdMax = (xMax - mean) / std;
+  function pdf(z) { return std * pdfRaw_(mean + z * std); }
+  function invCdf(p) { return (invCdfRaw_(p) - mean) / std; }
+
+  return {
+    ...spec,
+    mean, std, skewness,
+    stdMin, stdMax,
+    pdf, invCdf
+  };
+}
+
+// ============================================================================
+// Distribution presets
+// ============================================================================
+
+const DISTRIBUTIONS = [
+  {
+    id: "normal",
+    name: "Normal",
+    layman: "The classic bell curve — most players sit in the middle, with as many great players as there are bad ones.",
+    desc: "Textbook bell curve. Symmetric — the default null hypothesis. The shape implicit in TrueSkill and Glicko per-player ratings.",
+    range: [-5, 5],
+    pdfRaw: x => normPdf(x)
+  },
+  {
+    id: "tight",
+    name: "Tight normal",
+    layman: "Same bell curve shape, but everyone is unusually close to average — the skill ladder is short.",
+    desc: "Narrow normal (σ=0.6). Most players clumped close to the median — the skill ladder is short.",
+    range: [-3, 3],
+    pdfRaw: x => normPdf(x / 0.6) / 0.6
+  },
+  {
+    id: "wide",
+    name: "Wide normal",
+    layman: "Same bell shape, but the gap between worst and best players is huge.",
+    desc: "Wide normal (σ=1.5). Big skill range from worst to best — the bell is fatter on both sides.",
+    range: [-6, 6],
+    pdfRaw: x => normPdf(x / 1.5) / 1.5
+  },
+  {
+    id: "logistic",
+    name: "Logistic (Elo)",
+    layman: "Almost a normal bell curve, but with slightly more 'unusually good' and 'unusually bad' players than a normal would predict.",
+    desc: "Like a normal but with slightly heavier tails. The implicit population shape behind Elo, Bradley–Terry, and similar pairwise rating systems.",
+    range: [-9, 9],
+    pdfRaw: x => {
+      const e = Math.exp(-x);
+      return e / Math.pow(1 + e, 2);
+    }
+  },
+  {
+    id: "heavy-tail",
+    name: "Heavy tails (t₃)",
+    layman: "Mostly normal in the middle, but with way more freak outliers — geniuses and disasters — on both ends than you'd expect.",
+    desc: "Student's t with ν=3. Symmetric but heavy-tailed — a few players are dramatically better or worse than the bulk.",
+    range: [-12, 12],
+    pdfRaw: x => Math.pow(1 + (x * x) / 3, -2)
+  },
+  {
+    id: "skew-mild",
+    name: "Mild right skew",
+    layman: "Lopsided to the right — a few players are noticeably better than typical, with no equivalent group of 'unusually bad' players.",
+    desc: "Skew-normal with α=3 (Azzalini, 1985). Slight right tail — a few players noticeably better than typical.",
+    range: [-4, 5],
+    pdfRaw: x => skewNormalPdf(x, 0, 1, 3)
+  },
+  {
+    id: "skew-heavy",
+    name: "Heavy right skew",
+    layman: "Strongly lopsided right — a thick layer of elite players above the bulk, with no comparable group of 'super bad' players.",
+    desc: "Skew-normal with α=10. Strong right tail — many elite outliers above the bulk.",
+    range: [-3, 6],
+    pdfRaw: x => skewNormalPdf(x, 0, 1, 10)
+  },
+  {
+    id: "lognormal",
+    name: "Lognormal",
+    layman: "Most players are close to a low floor, but small skill advantages compound — a few players end up dramatically ahead of the pack.",
+    desc: "Multiplicative skill — small advantages compound. Right-skewed with a hard floor; common in human-performance data (Limpert et al., 2001).",
+    range: [0, 10],
+    pdfRaw: x => x > 0
+      ? Math.exp(-0.5 * Math.pow(Math.log(x) / 0.6, 2)) / (x * 0.6 * Math.sqrt(2 * Math.PI))
+      : 0
+  },
+  {
+    id: "gumbel",
+    name: "Gumbel (extreme value)",
+    layman: "Like a bell curve that's been pulled to the right, with a sharp peak just above average and a long thin tail of elite players.",
+    desc: "Right-skewed extreme-value distribution. Underlies Plackett–Luce ranking models and shows up when you're modelling the maximum of many independent attempts (best-of-N performance).",
+    range: [-4, 10],
+    pdfRaw: x => {
+      const u = Math.exp(-x);
+      return u * Math.exp(-u);
+    }
+  },
+  {
+    id: "gamma",
+    name: "Gamma (k=2)",
+    layman: "Tons of beginners stacked near zero skill, with a slow taper of better players reaching far to the right.",
+    desc: "Right-skewed positive distribution. Sometimes used in psychometric and skill-magnitude studies — most players are mediocre, a few are outstanding.",
+    range: [0, 14],
+    pdfRaw: x => x > 0 ? x * Math.exp(-x) : 0
+  },
+  {
+    id: "weibull",
+    name: "Weibull (k=1.5)",
+    layman: "A bunch of low-skill new players plus a thinning crowd of better ones, with no super-elite extremes.",
+    desc: "Flexible right-skewed shape from survival/reliability analysis; used in skill-acquisition and learning-curve research to capture diminishing returns near a ceiling.",
+    range: [0, 6],
+    pdfRaw: x => x > 0 ? 1.5 * Math.sqrt(x) * Math.exp(-Math.pow(x, 1.5)) : 0
+  },
+  {
+    id: "bimodal",
+    name: "Bimodal",
+    layman: "Two distinct crowds — a big casual blob at lower skill and a smaller tryhard blob at higher skill, with a valley between them.",
+    desc: "Two populations: a casual cluster around the lower peak, a tryhard cluster around the upper one. Documented in matchmaking-data analyses for games with active vs casual subgroups.",
+    range: [-4, 5],
+    pdfRaw: x => mixNormalPdf(x, 0.6, -1, 0.6, 1.5, 0.7)
+  },
+  {
+    id: "truncated",
+    name: "Truncated (hard cap)",
+    layman: "Bell curve with a hard wall on the right — nobody can be better than a certain ceiling, so all the best players pile up against it.",
+    desc: "Normal cut off at +2σ — a mechanical wall, no player can exceed a certain raw ability. Top tiers all live in the same narrow strip near the cap.",
+    range: [-5, 2.001],
+    pdfRaw: x => x > 2 ? 0 : normPdf(x)
+  }
+];
+
+const BUILT = {};
+for (const spec of DISTRIBUTIONS) BUILT[spec.id] = buildDist(spec);
+
+// ============================================================================
+// Drawing
+// ============================================================================
+
+// X axis covers a wide-enough span that even the heavy right tails (Gamma,
+// Gumbel, Weibull) keep the Challenger band edge in frame.
+const X_MIN = -4, X_MAX = 7;
+
+function computeYMax(d) {
+  let max = 0;
+  const N = 280;
+  for (let i = 0; i <= N; i++) {
+    const z = X_MIN + (X_MAX - X_MIN) * i / N;
+    if (z < d.stdMin || z > d.stdMax) continue;
+    const v = d.pdf(z);
+    if (v > max) max = v;
+  }
+  return Math.max(0.4, max * 1.12);
+}
+
+function drawPlot(canvas) {
+  const d = dist();
+  const yMax = computeYMax(d);
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const cw = canvas.clientWidth;
+  const ch = canvas.clientHeight;
+  if (canvas.width !== Math.round(cw * dpr) || canvas.height !== Math.round(ch * dpr)) {
+    canvas.width  = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+
+  const padding = {top: 14, right: 18, bottom: 32, left: 18};
+  const plotW = cw - padding.left - padding.right;
+  const plotH = ch - padding.top  - padding.bottom;
+
+  // y axis floor: 0 in linear, a small positive value in log so we get 4
+  // orders of magnitude of dynamic range below the peak.
+  const yMin = useLogY ? Math.max(1e-6, yMax * 1e-4) : 0;
+  const logRange = useLogY ? Math.log(yMax) - Math.log(yMin) : 1;
+
+  function x2px(z) { return padding.left + (z - X_MIN) / (X_MAX - X_MIN) * plotW; }
+  function y2py(y) {
+    if (useLogY) {
+      const safe = Math.max(yMin, y);
+      return padding.top + (1 - (Math.log(safe) - Math.log(yMin)) / logRange) * plotH;
+    }
+    return padding.top + (1 - y / yMax) * plotH;
+  }
+  // Bottom of plot (y=0 in linear, y=yMin floor in log).
+  const yBottomPx = y2py(0);
+
+  function density(z) {
+    if (z < d.stdMin || z > d.stdMax) return 0;
+    return d.pdf(z);
+  }
+
+  const bands = activeBands();
+
+  // 1) Filled bands at fixed cumulative percentiles of the chosen distribution.
+  for (const band of bands) {
+    const zR = d.invCdf(1 - band.top);
+    const zL = d.invCdf(1 - band.bot);
+    const zLeft  = Math.max(X_MIN, zL);
+    const zRight = Math.min(X_MAX, zR);
+    if (zLeft >= zRight) continue;
+
+    ctx.beginPath();
+    ctx.moveTo(x2px(zLeft), yBottomPx);
+    const N = 80;
+    for (let i = 0; i <= N; i++) {
+      const z = zLeft + (zRight - zLeft) * i / N;
+      ctx.lineTo(x2px(z), y2py(density(z)));
+    }
+    ctx.lineTo(x2px(zRight), yBottomPx);
+    ctx.closePath();
+    ctx.fillStyle = band.color;
+    ctx.fill();
+  }
+
+  // 2) Division separators inside each tier.
+  ctx.strokeStyle = "rgba(15,17,22,0.32)";
+  ctx.lineWidth = 0.6;
+  for (let i = 1; i < bands.length; i++) {
+    if (bands[i].tier !== bands[i-1].tier) continue;
+    const z = d.invCdf(1 - bands[i].top);
+    if (z <= X_MIN || z >= X_MAX) continue;
+    const xPx = x2px(z);
+    ctx.beginPath();
+    ctx.moveTo(xPx, yBottomPx);
+    ctx.lineTo(xPx, y2py(density(z)));
+    ctx.stroke();
+  }
+
+  // 3) Tier separators.
+  ctx.strokeStyle = "rgba(15,17,22,0.85)";
+  ctx.lineWidth = 1;
+  for (let i = 1; i < bands.length; i++) {
+    if (bands[i].tier === bands[i-1].tier) continue;
+    const z = d.invCdf(1 - bands[i].top);
+    if (z <= X_MIN || z >= X_MAX) continue;
+    const xPx = x2px(z);
+    ctx.beginPath();
+    ctx.moveTo(xPx, yBottomPx);
+    ctx.lineTo(xPx, y2py(density(z)));
+    ctx.stroke();
+  }
+
+  // 4) Faint reference: standard normal under the same axis.
+  if (activeId !== "normal") {
+    ctx.beginPath();
+    const Nb = 320;
+    for (let i = 0; i <= Nb; i++) {
+      const z = X_MIN + (X_MAX - X_MIN) * i / Nb;
+      const v = normPdf(z);
+      if (i === 0) ctx.moveTo(x2px(z), y2py(v));
+      else         ctx.lineTo(x2px(z), y2py(v));
+    }
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // 5) Live curve outline.
+  ctx.beginPath();
+  let started = false;
+  const N = 440;
+  for (let i = 0; i <= N; i++) {
+    const z = X_MIN + (X_MAX - X_MIN) * i / N;
+    if (z < d.stdMin || z > d.stdMax) {
+      if (started) {
+        ctx.lineTo(x2px(z), yBottomPx);
+        started = false;
+      }
+      continue;
+    }
+    const v = density(z);
+    if (!started) { ctx.moveTo(x2px(z), yBottomPx); started = true; }
+    ctx.lineTo(x2px(z), y2py(v));
+  }
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 6) Baseline x-axis.
+  ctx.beginPath();
+  ctx.moveTo(x2px(X_MIN), yBottomPx);
+  ctx.lineTo(x2px(X_MAX), yBottomPx);
+  ctx.strokeStyle = "rgba(255,255,255,0.4)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // 7) Median indicator.
+  const medZ = d.invCdf(0.5);
+  if (medZ > X_MIN && medZ < X_MAX) {
+    const medPx = x2px(medZ);
+    ctx.beginPath();
+    ctx.moveTo(medPx, yBottomPx);
+    ctx.lineTo(medPx, y2py(density(medZ)));
+    ctx.strokeStyle = "rgba(255,255,255,0.45)";
+    ctx.setLineDash([3, 3]);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // 8) X-axis labels.
+  ctx.fillStyle = "rgba(232,232,238,0.7)";
+  ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  for (let s = Math.ceil(X_MIN); s <= Math.floor(X_MAX); s++) {
+    if (s >= X_MIN + 0.3 && s <= X_MAX - 0.3) {
+      ctx.fillText(s + "σ", x2px(s), yBottomPx + 16);
+    }
+  }
+}
+
+// ============================================================================
+// Stats
+// ============================================================================
+
+function tierWidth(tier) {
+  // σ-width that this tier covers in standardised skill space. Cap the open
+  // ends (Challenger top, Iron IV bot) at [0.0001, 0.9999] to keep widths
+  // finite — interpret the displayed width as "skill spread between the
+  // typical members of this rank and its 1-in-10000 extreme."
+  const tierBands = BANDS.filter(b => b.tier === tier);
+  if (tierBands.length === 0) return 0;
+  const top = Math.max(0.0001, tierBands[0].top);
+  const bot = Math.min(0.9999, tierBands[tierBands.length - 1].bot);
+  const d = dist();
+  return d.invCdf(1 - top) - d.invCdf(1 - bot);
+}
+
+function tierPop(tier) {
+  const tierBands = BANDS.filter(b => b.tier === tier);
+  if (tierBands.length === 0) return 0;
+  return tierBands[tierBands.length - 1].bot - tierBands[0].top;
+}
+
+function fmtSigma(s) {
+  if (!isFinite(s)) return "&mdash;";
+  if (s < 0.001) return s.toFixed(4) + "σ";
+  if (s < 0.01)  return s.toFixed(3) + "σ";
+  return s.toFixed(2) + "σ";
+}
+
+function fmtPct(p) {
+  if (p <= 0) return "0.000%";
+  if (p < 0.0001) return (p * 100).toFixed(4) + "%";
+  if (p < 0.001)  return (p * 100).toFixed(3) + "%";
+  if (p < 0.01)   return (p * 100).toFixed(2) + "%";
+  return (p * 100).toFixed(1) + "%";
+}
+
+function fmtRatio(base, now) {
+  if (now <= 0 || base <= 0 || !isFinite(now) || !isFinite(base)) return "&mdash;";
+  const r = now / base;
+  if (Math.abs(r - 1) < 0.005) return "&middot;";
+  if (r >= 100) return r.toFixed(0) + "&times;";
+  if (r >= 10)  return r.toFixed(1) + "&times;";
+  return r.toFixed(2) + "&times;";
+}
+
+function ratioCellClass(base, now) {
+  if (Math.abs(base - now) < 1e-5) return "delta-zero";
+  return now > base ? "delta-up" : "delta-down";
+}
+
+function tierWidthFor(distId, tier) {
+  const tierBands = BANDS.filter(b => b.tier === tier);
+  if (tierBands.length === 0) return 0;
+  const top = Math.max(0.0001, tierBands[0].top);
+  const bot = Math.min(0.9999, tierBands[tierBands.length - 1].bot);
+  const d = BUILT[distId];
+  return d.invCdf(1 - top) - d.invCdf(1 - bot);
+}
+
+function renderStats() {
+  let html = `
+    <p class="stats-note">Population per rank stays exactly fixed across distributions. Only the σ-width of skill that each rank covers changes — that's where the differences live. <em>× normal</em> shows how each rank's σ-width compares to the textbook normal baseline.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Tier</th>
+          <th>pop %</th>
+          <th>σ-width</th>
+          <th>× normal</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  for (const tier of TIERS_ORDER) {
+    const pop = tierPop(tier);
+    const w   = tierWidth(tier);
+    const wN  = tierWidthFor("normal", tier);
+    html += `
+      <tr class="tier-row" style="border-left-color:${TIER_COLORS[tier]}">
+        <td style="border-left-color:${TIER_COLORS[tier]}">${TIER_LABEL[tier]}</td>
+        <td>${fmtPct(pop)}</td>
+        <td class="now-cell">${fmtSigma(w)}</td>
+        <td class="${ratioCellClass(wN, w)}">${fmtRatio(wN, w)}</td>
+      </tr>
+    `;
+  }
+  html += "</tbody></table>";
+  return html;
+}
+
+// ============================================================================
+// UI
+// ============================================================================
+
+const plotEl   = document.getElementById("plot");
+const pickerEl = document.getElementById("picker");
+const descEl   = document.getElementById("desc");
+const legendEl = document.getElementById("legend");
+const figCapEl = document.getElementById("figCaption");
+
+const FIG_CAPTIONS = {
+  "2025": '<strong>2025 NA</strong> ranks &mdash; 0.69% Master+, 2.56% Diamond, 8.40% Emerald',
+  "2026": '<strong>2026 split 1 NA</strong> ranks &mdash; 1.18% Master+, 3.44% Diamond, 10.55% Emerald'
+};
+
+function refreshDesc() {
+  const d = dist();
+  descEl.innerHTML =
+      `<strong>${d.name}</strong> &mdash; ${d.layman}`
+    + `<div class="tech">${d.desc}<span class="moment">skewness ${d.skewness.toFixed(2)}</span></div>`;
+}
+
+function refreshActiveButtons() {
+  for (const btn of pickerEl.querySelectorAll("button")) {
+    btn.classList.toggle("active", btn.dataset.id === activeId);
+  }
+  for (const btn of document.querySelectorAll("[data-year]")) {
+    btn.classList.toggle("active", btn.dataset.year === activeYear);
+  }
+  for (const btn of document.querySelectorAll("[data-yaxis]")) {
+    btn.classList.toggle("active", btn.dataset.yaxis === (useLogY ? "log" : "linear"));
+  }
+}
+
+function rerender() {
+  refreshActiveButtons();
+  figCapEl.innerHTML = FIG_CAPTIONS[activeYear];
+  refreshDesc();
+  drawPlot(plotEl);
+}
+
+function setActive(id)  { if (BUILT[id]) { activeId   = id;   rerender(); } }
+function setYear(y)     { activeYear = y;            rerender(); }
+function setYAxis(mode) { useLogY    = mode === "log"; rerender(); }
+
+// Picker buttons
+for (const spec of DISTRIBUTIONS) {
+  const btn = document.createElement("button");
+  btn.dataset.id = spec.id;
+  btn.textContent = spec.name;
+  btn.addEventListener("click", () => setActive(spec.id));
+  pickerEl.appendChild(btn);
+}
+
+// Year + Y-axis toggle handlers
+for (const btn of document.querySelectorAll("[data-year]"))  btn.addEventListener("click", () => setYear(btn.dataset.year));
+for (const btn of document.querySelectorAll("[data-yaxis]")) btn.addEventListener("click", () => setYAxis(btn.dataset.yaxis));
+
+// Color legend (low-skill on the left, matching the chart left-to-right order)
+const LEGEND_ORDER = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM",
+                      "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"];
+for (const tier of LEGEND_ORDER) {
+  const chip = document.createElement("span");
+  chip.className = "chip";
+  chip.innerHTML = `<span class="swatch" style="background:${TIER_COLORS[tier]}"></span>${TIER_LABEL[tier]}`;
+  legendEl.appendChild(chip);
+}
+
+window.addEventListener("resize", () => drawPlot(plotEl));
+rerender();
+</script>
+
+</body>
+</html>
